@@ -3,10 +3,11 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-//#include <unistd.h>
-//#include <gc.h>
+#if defined (UNIX)
+#include <unistd.h>
+#include <gc.h>
+#endif
 #include "prototypes.h"
-
 /*
 Code: new_tephra.c
 By: C.B. & L.J. Connor, T. Hincks, and C. Bonadonna
@@ -259,13 +260,16 @@ int get_points(FILE *in) {
 
  /* local_n = num_pts;*/
   
-
 #ifdef _PRINT  
     fprintf(log_file, "Total locations: %d.\n", num_pts);
 #endif    
-  
-  //pt = (POINT *)GC_MALLOC((size_t)num_pts * sizeof(POINT));
+ 
+#if defined (UNIX)
+    pt = (POINT *)GC_MALLOC((size_t)num_pts * sizeof(POINT));
+#else
 	pt = (POINT *)malloc((size_t)num_pts * sizeof(POINT));
+#endif
+
   if (pt == NULL) {
     fprintf(stderr, "Cannot malloc memory for my points:[%s]\n", strerror(errno));
     return -1;
@@ -341,16 +345,21 @@ int get_wind(FILE *in) {
 #endif
   
   WIND_INTERVAL = (e.max_plume_elevation - e.vent_elevation)/(double)COL_STEPS;
-  
-  //W = (WIND**)GC_MALLOC((size_t)WIND_DAYS * sizeof(WIND *));
+#if defined (UNIX)
+  W = (WIND**)GC_MALLOC((size_t)WIND_DAYS * sizeof(WIND *));
+#else
   W = (WIND**)malloc((size_t)WIND_DAYS * sizeof(WIND *));
+#endif
   if (W == NULL) {
     fprintf(stderr, "Cannot malloc memory for wind columns:[%s]\n", strerror(errno));
     return -1;
   } else {
     for (i=0; i < WIND_DAYS; i++) {
-      //W[i] = (WIND *)GC_MALLOC((size_t)(COL_STEPS+1) * sizeof(WIND));
+#if defined (UNIX)
+        W[i] = (WIND *)GC_MALLOC((size_t)(COL_STEPS+1) * sizeof(WIND));
+#else
 		W[i] = (WIND *)malloc((size_t)(COL_STEPS+1) * sizeof(WIND));
+#endif
       if (W[i] == NULL) {
 	fprintf(stderr, "Cannot malloc memory for wind rows %d:[%s]\n", i, strerror(errno));
 	return -1;
@@ -465,6 +474,7 @@ int init_globals(char *config_file) {
   char line[MAX_LINE];
   char space[4] = "\n\t ";
   char *token;
+  int err = 0;
   
 #ifdef _PRINT  
   fprintf(log_file, "ENTER[init_globals].\n");
@@ -481,46 +491,59 @@ int init_globals(char *config_file) {
   while (fgets(line, MAX_LINE, in_config) != NULL) {
     /* fprintf(stderr, "%s\n", line); */
     if (line[0] == '#' || line[0] == '\n' || line[0] == ' ')  continue;
-    token = strtok_r(line, space, ptr1);
+
+#if !defined (UNIX) && !defined (OSX)
+	token = strtok_s(line, space, ptr1);
+#else
+	token = strtok_r(line, space, ptr1);
+#endif
     if (!strncmp(token, "DIFFUSION_COEFFICIENT", strlen("DIFFUSION_COEFFICIENT"))) {
-      token = strtok_r(NULL,space,ptr1);
+	  //token = strtok_s(NULL,space,ptr1);
+	  err = parse_tok(ptr1,&token,space);
       e.diffusion_coefficient = strtod(token, NULL);
       /* DIFFUSION_COEFFICIENT can never be 0 as it is used in divisions */
       if (e.diffusion_coefficient < 1.0) e.diffusion_coefficient = 1.0;
       fprintf(stderr, "DIFFUSION_COEFFICIENT=%.0f\n", e.diffusion_coefficient);
     } 
     else if (!strncmp(token, "EDDY_CONST", strlen("EDDY_CONST"))) {
-      token = strtok_r(NULL,space,ptr1);
+      //token = strtok_r(NULL,space,ptr1);
+	  err = parse_tok(ptr1,&token,space);
       e.eddy_constant = strtod(token, NULL);
       fprintf(stderr, "EDDY_CONST=%.2f\n", e.eddy_constant);
     }
     else if (!strncmp(token, "FALL_TIME_THRESHOLD", strlen("FALL_TIME_THRESHOLD"))) {
-      token = strtok_r(NULL,space,ptr1);
-      e.fall_time_threshold = strtod(token, NULL);
+      //token = strtok_r(NULL,space,ptr1);
+      err = parse_tok(ptr1,&token,space);
+	  e.fall_time_threshold = strtod(token, NULL);
       fprintf(stderr, "FALL_TIME_THRESHOLD=%.0f\n", e.fall_time_threshold);
     }
     else if (!strncmp(token, "LITHIC_DENSITY", strlen("LITHIC_DENSITY"))) {
-      token = strtok_r(NULL,space,ptr1);
+      //token = strtok_r(NULL,space,ptr1);
+	  err = parse_tok(ptr1,&token,space);
       e.lithic_density = strtod(token, NULL);
       fprintf(stderr, "LITHIC_DENSITY=%.0f\n", e.lithic_density);
     }
     else if (!strncmp(token, "PUMICE_DENSITY", strlen("PUMICE_DENSITY"))) {
-      token = strtok_r(NULL,space,ptr1);
+      //token = strtok_r(NULL,space,ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.pumice_density = strtod(token, NULL);
       fprintf(stderr, "PUMICE_DENSITY=%.0f\n", e.pumice_density);
     }
     else if (!strncmp(token, "PART_STEPS", strlen("PART_STEPS"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       PART_STEPS = (int)atof(token);
       fprintf(stderr, "PART_STEPS = %d\n", PART_STEPS);
     }
     else if (!strncmp(token, "COL_STEPS", strlen("COL_STEPS"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       COL_STEPS = (int)atof(token);
       fprintf(stderr, "COL_STEPS = %d\n", COL_STEPS);
     }
     else if (!strncmp(token, "PLUME_MODEL", strlen("PLUME_MODEL"))) {
-      token = strtok_r(NULL,space,ptr1);
+      //token = strtok_r(NULL,space,ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.plume_model = (int)atof(token);
       
       if (e.plume_model == 0) {
@@ -537,73 +560,95 @@ int init_globals(char *config_file) {
       }
     }
     else if (!strncmp(token, "PLUME_RATIO", strlen("PLUME_RATIO"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+	  err = parse_tok(ptr1,&token,space);
       e.plume_ratio = strtod(token, NULL);
       if (!e.plume_model) fprintf(stderr, "PLUME_RATIO = %.2f\n", e.plume_ratio);
     }
     else if (!strncmp(token, "ALPHA", strlen("ALPHA"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.alpha = strtod(token, NULL);
       if (e.plume_model==2) fprintf(stderr, "ALPHA = %g\n", e.alpha);
     }
     else if (!strncmp(token, "BETA", strlen("BETA"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.beta = strtod(token, NULL);
       if (e.plume_model==2) fprintf(stderr, "BETA = %g\n", e.beta);
     }
     else if (!strncmp(token, "PLUME_HEIGHT", strlen("PLUME_HEIGHT"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.max_plume_elevation = strtod(token, NULL);
       fprintf(stderr, "PLUME_HEIGHT = %.0f\n", e.max_plume_elevation);
     }
     else if (!strncmp(token, "ERUPTION_MASS", strlen("ERUPTION_MASS"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.total_ash_mass = strtod(token, NULL);
       fprintf(stderr, "ERUPTION_MASS = %g\n", e.total_ash_mass);
     }
     else if (!strncmp(token, "MAX_GRAINSIZE", strlen("MAX_GRAINSIZE"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.min_phi = strtod(token, NULL);
       fprintf(stderr, "MAX_GRAINSIZE = %g (phi)\n", e.min_phi);
     }
     else if (!strncmp(token, "MIN_GRAINSIZE", strlen("MIN_GRAINSIZE"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.max_phi = strtod(token, NULL);
       fprintf(stderr, "MIN_GRAINSIZE = %g (phi)\n", e.max_phi);
     }
     else if (!strncmp(token, "MEDIAN_GRAINSIZE", strlen("MEDIAN_GRAINSIZE"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.mean_phi = strtod(token, NULL);
       fprintf(stderr, "MEDIAN_GRAINSIZE = %g (phi)\n", e.mean_phi);
     }
     else if (!strncmp(token, "STD_GRAINSIZE", strlen("STD_GRAINSIZE"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.sigma_phi = strtod(token, NULL);
       /* if (STD_GRAINSIZE < 1.0) STD_GRAINSIZE = 1.0; */
       fprintf(stderr, "STD_GRAINSIZE = %g (phi)\n", e.sigma_phi);
     }
     else if (!strncmp(token, "VENT_EASTING", strlen("VENT_EASTING"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.vent_easting = strtod(token, NULL);
       fprintf(stderr, "VENT_EASTING = %.0f\n", e.vent_easting);
     }
     else if (!strncmp(token, "VENT_NORTHING", strlen("VENT_NORTHING"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1); 
+      err = parse_tok(ptr1,&token,space);
       e.vent_northing = strtod(token, NULL);
       fprintf(stderr, "VENT_NORTHING = %.0f\n", e.vent_northing);
     }
     else if (!strncmp(token, "VENT_ELEVATION", strlen("VENT_ELEVATION"))) {
-      token = strtok_r(NULL, space, ptr1);
+      //token = strtok_r(NULL, space, ptr1);
+      err = parse_tok(ptr1,&token,space);
       e.vent_elevation = strtod(token, NULL);
       fprintf(stderr, "VENT_ELEVATION = %.0f\n", e.vent_elevation);
     }
     else continue;
   }
   (void) fclose(in_config);
-
 #ifdef _PRINT
   fprintf(log_file, "EXIT[init_globals].\n");
 #endif
 
   return 0;
 }
+
+int parse_tok(char** ptr1,char** token,char* space)
+{
+	
+#if !defined (UNIX) && !defined (OSX)  
+	  *token = strtok_s(NULL,space,ptr1);
+#else
+	  *token = strtok_r(NULL,space,ptr1);
+#endif
+	return 0;
+	}

@@ -3,6 +3,10 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
+#if define !(_WIN32) && !(_WIN64)
+#include <unistd.h>
+#include <gc.h>
+#endif
 //#include <unistd.h>
 //#include <gc.h>
 #include "prototypes.h"
@@ -735,16 +739,22 @@ printf(log_file, "PART_STEPS=%d\n", PART_STEPS);
      Used in the double integration steps below for each point considered.
     */
     if (T == NULL) {
-        //T = (TABLE **)GC_MALLOC((size_t)PART_STEPS * sizeof(TABLE *));
+#if defined (UNIX)
+        T = (TABLE **)GC_MALLOC((size_t)PART_STEPS * sizeof(TABLE *));
+#else
 		T = (TABLE **)malloc((size_t)PART_STEPS * sizeof(TABLE *));
+#endif
         if (T == NULL) {
             fprintf(log_file, 
             "Cannot malloc memory for Integration Table:[%s]\n", strerror(errno));
             exit(1);
         }
         for (i=0; i<PART_STEPS; i++) {
-            //T[i] = (TABLE *)GC_MALLOC((size_t)COL_STEPS * sizeof(TABLE));
+#if defined (UNIX)
+            T[i] = (TABLE *)GC_MALLOC((size_t)COL_STEPS * sizeof(TABLE));
+#else
 			T[i] = (TABLE *)malloc((size_t)COL_STEPS * sizeof(TABLE));
+#endif
             if (T[i] == NULL) {
                 fprintf(log_file, 
                 "Cannot malloc memory for Integration Table[%d]:[%s]\n", i, strerror(errno));
@@ -753,16 +763,22 @@ printf(log_file, "PART_STEPS=%d\n", PART_STEPS);
         }
     } 
     else {
-        //T = (TABLE **)GC_REALLOC(T, (size_t)PART_STEPS * sizeof(TABLE *));
+#if defined (UNIX)
+        T = (TABLE **)GC_REALLOC(T, (size_t)PART_STEPS * sizeof(TABLE *));
+#else
 		T = (TABLE **)realloc(T, (size_t)PART_STEPS * sizeof(TABLE *));
+#endif
         if (T == NULL) {
             fprintf(log_file, 
             "Cannot malloc memory for Integration Table:[%s]\n", strerror(errno));
             exit(1);
         }
         for (i=0; i<PART_STEPS; i++) {
-            //T[i] = (TABLE *)GC_REALLOC(T[i], (size_t)COL_STEPS * sizeof(TABLE));
+#if defined (UNIX)
+            T[i] = (TABLE *)GC_REALLOC(T[i], (size_t)COL_STEPS * sizeof(TABLE));
+#else
 			T[i] = (TABLE *)realloc(T[i], (size_t)COL_STEPS * sizeof(TABLE));
+#endif
             if (T[i] == NULL) {
                 fprintf(log_file, 
                 "Cannot malloc memory for Integration Table[%d]:[%s]\n", i, strerror(errno));
