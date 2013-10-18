@@ -3,7 +3,7 @@
 #include <errno.h>
 #include <string.h>
 #include <stdlib.h>
-#if define !(_WIN32) && !(_WIN64)
+#if defined (UNIX)
 #include <unistd.h>
 #include <gc.h>
 #endif
