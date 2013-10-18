@@ -489,7 +489,7 @@ int init_globals(char *config_file) {
   
   ptr1 = (char **)&buf[0];
   while (fgets(line, MAX_LINE, in_config) != NULL) {
-    /* fprintf(stderr, "%s\n", line); */
+    fprintf(stderr, "%s\n", line); 
     if (line[0] == '#' || line[0] == '\n' || line[0] == ' ')  continue;
 
 #if !defined (UNIX) && !defined (OSX)
